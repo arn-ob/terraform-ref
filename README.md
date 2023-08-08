@@ -6,6 +6,10 @@
 
  - terraform init
 
+### Show Tf Plan
+
+ - terraform plan
+
 ### Format and validate the configuration
 
 We recommend using consistent formatting in all of your configuration files. The terraform fmt command automatically updates configurations in the current directory for readability and consistency.
