@@ -1,4 +1,4 @@
-# Plan
+# Pipline Plan
 # 
 # 1. Create VPC
 # 2. Create Subnet
@@ -29,33 +29,40 @@ provider "aws" {
   profile = "arn"
 }
 
+
 # --- Provider Config ----
+
 
 # Create VPC
 resource "aws_vpc" "basic-vpc" {
 
-  cidr_block = "10.0.0.0/16"
+  cidr_block = "10.0.0.0/20"
 
   tags = {
     Name = "basic-vpc"
   }
 }
 
+
 # Create Subnet
 resource "aws_subnet" "basic-vpc-subnet-1" {
 
-  vpc_id     = aws_vpc.basic-vpc.id
-  cidr_block = "10.0.1.0/26"
+  vpc_id            = aws_vpc.basic-vpc.id
+  cidr_block        = "10.0.1.0/26"
+  availability_zone = "ap-northeast-3a"
 
   tags = {
     Name = "basic-vpc-subnet-1"
   }
 }
 
+
 # Create Internet Gateway
 resource "aws_internet_gateway" "basic-gw" {
   vpc_id = aws_vpc.basic-vpc.id
 }
+
+
 
 # Create customer route table
 resource "aws_route_table" "basic-route-table" {
@@ -63,20 +70,22 @@ resource "aws_route_table" "basic-route-table" {
   vpc_id = aws_vpc.basic-vpc.id
 
   route {
-    cidr_block = "10.0.1.0/26"
+    cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.basic-gw.id
   }
 
   route {
-    cidr_block             = "0.0.0.0/0"
-    egress_only_gateway_id = aws_internet_gateway.basic-gw.id
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.basic-gw.id
   }
 
-  tags {
+  tags = {
     Name = "basic-route-table"
   }
 
 }
+
+
 
 # Associate the subnet with the route table
 resource "aws_route_table_association" "basic-route-table-association" {
@@ -84,18 +93,20 @@ resource "aws_route_table_association" "basic-route-table-association" {
   route_table_id = aws_route_table.basic-route-table.id
 }
 
+
 # Create a security group to allow 22,80,443
 resource "aws_security_group" "basic-sg" {
 
   name        = "basic-sg-for-web"
   description = "Allow inbound traffic"
+  vpc_id = aws_vpc.basic-vpc.id
 
   ingress {
     description = "SSH from VPC"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [aws_vpc.basic-vpc.cidr_block]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
@@ -114,7 +125,6 @@ resource "aws_security_group" "basic-sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-
   # Allow all outbound traffic
   egress {
     description = "Allow all outbound traffic"
@@ -124,16 +134,56 @@ resource "aws_security_group" "basic-sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags {
+  tags = {
     Name = "Allow_Web"
   }
 }
 
+
 # Create a network interface with an IP in the subnet that was created in step 4
+resource "aws_network_interface" "basic-nic" {
+  subnet_id       = aws_subnet.basic-vpc-subnet-1.id
+  private_ips     = ["10.0.1.50"]
+  security_groups = [aws_security_group.basic-sg.id]
+
+}
 
 
+# Assign an elastic IP to the network interface created in step 8
+resource "aws_eip" "basic-eip" {
+  vpc                       = true
+  network_interface         = aws_network_interface.basic-nic.id
+  associate_with_private_ip = "10.0.1.50"
+  depends_on                = [aws_internet_gateway.basic-gw]
+}
 
 
+# Create a ubuntu serve
+resource "aws_instance" "basic-ec2" {
 
+  ami               = "ami-0da13880f921c96a5"
+  instance_type     = "t2.micro"
+  availability_zone = "ap-northeast-3a"
+
+  key_name                    = "arn"
+  subnet_id                   = aws_subnet.basic-vpc-subnet-1.id
+  associate_public_ip_address = true
+
+  network_interface {
+    network_interface_id = aws_network_interface.basic-nic.id
+    device_index         = 0
+  }
+
+  user_data = <<-EOF
+                #!/bin/bash
+                sudo apt-get update
+                sudo apt-get install -y nginx
+                sudo service nginx start
+                EOF
+
+  tags = {
+    Name = "web-basic-ec2"
+  }
+}
 
 
