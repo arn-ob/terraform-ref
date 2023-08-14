@@ -56,17 +56,6 @@ resource "aws_subnet" "basic-vpc-subnet-1" {
   }
 }
 
-resource "aws_subnet" "basic-vpc-subnet-2" {
-
-  vpc_id            = aws_vpc.basic-vpc.id
-  cidr_block        = "10.0.2.0/28"
-  availability_zone = "ap-northeast-3b"
-
-  tags = {
-    Name = "basic-vpc-subnet-2"
-  }
-}
-
 
 # Create Internet Gateway
 resource "aws_internet_gateway" "basic-gw" {
