@@ -56,6 +56,17 @@ resource "aws_subnet" "basic-vpc-subnet-1" {
   }
 }
 
+resource "aws_subnet" "basic-vpc-subnet-2" {
+
+  vpc_id            = aws_vpc.basic-vpc.id
+  cidr_block        = "10.0.2.0/28"
+  availability_zone = "ap-northeast-3b"
+
+  tags = {
+    Name = "basic-vpc-subnet-2"
+  }
+}
+
 
 # Create Internet Gateway
 resource "aws_internet_gateway" "basic-gw" {
@@ -99,7 +110,7 @@ resource "aws_security_group" "basic-sg" {
 
   name        = "basic-sg-for-web"
   description = "Allow inbound traffic"
-  vpc_id = aws_vpc.basic-vpc.id
+  vpc_id      = aws_vpc.basic-vpc.id
 
   ingress {
     description = "SSH from VPC"
@@ -164,14 +175,17 @@ resource "aws_instance" "basic-ec2" {
   ami               = "ami-0da13880f921c96a5"
   instance_type     = "t2.micro"
   availability_zone = "ap-northeast-3a"
+  key_name          = "general"
 
-  key_name                    = "arn"
-  subnet_id                   = aws_subnet.basic-vpc-subnet-1.id
-  associate_public_ip_address = true
+  # 
+  # vpc_id = aws_vpc.basic-vpc.id
+  # subnet_id                   = aws_subnet.basic-vpc-subnet-2.id
+  # associate_public_ip_address = false
 
+  # If network interface is used, comment out the subnet_id
   network_interface {
-    network_interface_id = aws_network_interface.basic-nic.id
     device_index         = 0
+    network_interface_id = aws_network_interface.basic-nic.id
   }
 
   user_data = <<-EOF
